@@ -24,24 +24,63 @@ THE SOFTWARE.
 
 #include <Artnet.h>
 
-Artnet::Artnet() {}
+uint8_t Artnet::node_ip_address[4];
+uint8_t Artnet::id[8];
 
-void Artnet::begin(byte mac[], byte ip[])
-{
-  #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
-    Ethernet.begin(mac,ip);
-  #endif
+AsyncUDP Artnet::udp;
+struct artnet_reply_s Artnet::ArtPollReply;
 
-  Udp.begin(ART_NET_PORT);
+artnet_config_s Artnet::config;
+uint8_t Artnet::artnetPacket[MAX_BUFFER_ARTNET];
+uint16_t Artnet::packetSize;
+IPAddress Artnet::broadcast;
+uint16_t Artnet::opcode;
+uint8_t Artnet::sequence;
+uint16_t Artnet::incomingUniverse;
+uint16_t Artnet::dmxDataLength;
+IPAddress Artnet::remoteIP;
+void (*Artnet::artDmxCallback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+void (*Artnet::artSyncCallback)(IPAddress remoteIP);
+
+/*
+begin Artnet with SPI
+*/
+void Artnet::begin(byte mac[], byte ip[]){
+
+  if (udp.listen(config.port)) {
+      Serial.print("Listening for Art-Net on port: ");
+      Serial.println(config.port);
+
+      // Funktion zur Verarbeitung eingehender Pakete registrieren
+      udp.onPacket([](AsyncUDPPacket packet) {
+          parsePacket(packet);
+      });
+  } else {
+      Serial.println("Failed to start UDP server");
+  }
+
+  // udp.begin(ART_NET_PORT);//!old
 }
 
-void Artnet::begin()
-{
-  Udp.begin(ART_NET_PORT);
+/*
+Funktion zum Pakete empfangen
+*/
+void Artnet::parsePacket(AsyncUDPPacket packet) {
+    // Serial.println("Art-Net Packet Received:");
+    // Serial.print("From: ");
+    // Serial.print(packet.remoteIP());
+    // Serial.print(":");
+    // Serial.println(packet.remotePort());
+    // Serial.print("Length: ");
+    // Serial.println(packet.length());
+
+    // Hier können spezifische Art-Net-Daten verarbeitet werden
+  read(&packet);
+
+    // Serial.println();
 }
 
-void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn)
-{
+void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){  //!old
   //Cast in uint 32 to use bitwise operation of DWORD
   uint32_t ip32 = ip;
   uint32_t sn32 = sn;
@@ -53,26 +92,25 @@ void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn)
   setBroadcast(IPAddress(bc));
 }
 
-void Artnet::setBroadcast(byte bc[])
-{
-  //sets the broadcast address
-  broadcast = bc;
-}
-void Artnet::setBroadcast(IPAddress bc)
-{
+void Artnet::setBroadcast(byte bc[]){//!old
   //sets the broadcast address
   broadcast = bc;
 }
 
-uint16_t Artnet::read()
-{
-  packetSize = Udp.parsePacket();
+void Artnet::setBroadcast(IPAddress bc){  //!old
+  //sets the broadcast address
+  broadcast = bc;
+}
 
-  remoteIP = Udp.remoteIP();
+uint16_t Artnet::read(AsyncUDPPacket *packet){  //!old
+  packetSize = packet->length();
+
+  // remoteIP = udp.remoteIP();
+  remoteIP = packet->remoteIP();
   if (packetSize <= MAX_BUFFER_ARTNET && packetSize > 0)
   {
-      Udp.read(artnetPacket, MAX_BUFFER_ARTNET);
-
+      // udp.read(artnetPacket, MAX_BUFFER_ARTNET); //!old
+      memcpy(artnetPacket, packet->data(), MAX_BUFFER_ARTNET);
       // Check that packetID is "Art-Net" else ignore
       for (byte i = 0 ; i < 8 ; i++)
       {
@@ -159,9 +197,21 @@ uint16_t Artnet::read()
             ArtPollReply.swin[i] = swin[i];
         }
         sprintf((char *)ArtPollReply.nodereport, "%i DMX output universes active.", ArtPollReply.numbports);
-        Udp.beginPacket(broadcast, ART_NET_PORT);//send the packet to the broadcast address
-        Udp.write((uint8_t *)&ArtPollReply, sizeof(ArtPollReply));
-        Udp.endPacket();
+        // udp.beginPacket(broadcast, ART_NET_PORT);//send the packet to the broadcast address  //!old
+        // udp.write((uint8_t *)&ArtPollReply, sizeof(ArtPollReply));
+        // udp.endPacket();
+
+
+        //!new
+        AsyncUDPMessage message(sizeof(ArtPollReply));  //new message for the reply
+        message.write((uint8_t*)&ArtPollReply, sizeof(ArtPollReply)); //fill the message with data
+
+        if (udp.broadcastTo(message, ART_NET_PORT, TCPIP_ADAPTER_IF_STA)) { //send reply
+          Serial.println("Packet sent successfully.");
+        } else {
+          Serial.println("Failed to send packet.");
+        }
+        
 
         return ART_POLL;
       }

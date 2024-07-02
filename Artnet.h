@@ -26,23 +26,7 @@ THE SOFTWARE.
 #define ARTNET_H
 
 #include <Arduino.h>
-
-#if defined(ARDUINO_SAMD_ZERO)
-    #include <WiFi101.h>
-    #include <WiFiUdp.h>
-#elif defined(ESP8266)
-    #include <ESP8266WiFi.h>
-    #include <WiFiUdp.h>
-#elif defined(ESP32)
-    #include <WiFi.h>
-    #include <WiFiUdp.h>
-#elif defined(ARDUINO_TEENSY41)
-    #include <NativeEthernet.h>
-    #include <NativeEthernetUdp.h>
-#else
-    #include <Ethernet.h>
-    #include <EthernetUdp.h>
-#endif
+#include <AsyncUDP_ESP32_SC_Ethernet.hpp>
 
 // UDP specific
 #define ART_NET_PORT 6454
@@ -56,6 +40,12 @@ THE SOFTWARE.
 // Packet
 #define ART_NET_ID "Art-Net\0"
 #define ART_DMX_START 18
+
+
+struct artnet_config_s {
+  uint16_t port = ART_NET_PORT;
+  bool staticIp = false;
+};
 
 struct artnet_reply_s {
   uint8_t  id[8];
@@ -98,79 +88,44 @@ struct artnet_reply_s {
 class Artnet
 {
 public:
-  Artnet();
+  static void begin(byte mac[], byte ip[]);
+  static void parsePacket(AsyncUDPPacket packet);
 
-  void begin(byte mac[], byte ip[]);
-  void begin();
-  void setBroadcastAuto(IPAddress ip, IPAddress sn);
-  void setBroadcast(byte bc[]);
-  void setBroadcast(IPAddress bc);
-  uint16_t read();
-  void printPacketHeader();
-  void printPacketContent();
+  static void setBroadcastAuto(IPAddress ip, IPAddress sn);
+  static void setBroadcast(byte bc[]);
+  static void setBroadcast(IPAddress bc);
+  static uint16_t read(AsyncUDPPacket *packet);
+  static void printPacketHeader();
+  static void printPacketContent();
 
   // Return a pointer to the start of the DMX data
-  inline uint8_t* getDmxFrame(void)
-  {
-    return artnetPacket + ART_DMX_START;
-  }
-
-  inline uint16_t getOpcode(void)
-  {
-    return opcode;
-  }
-
-  inline uint8_t getSequence(void)
-  {
-    return sequence;
-  }
-
-  inline uint16_t getUniverse(void)
-  {
-    return incomingUniverse;
-  }
-
-  inline uint16_t getLength(void)
-  {
-    return dmxDataLength;
-  }
-
-  inline IPAddress getRemoteIP(void)
-  {
-    return remoteIP;
-  }
-
-  inline void setArtDmxCallback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP))
-  {
-    artDmxCallback = fptr;
-  }
-
-  inline void setArtSyncCallback(void (*fptr)(IPAddress remoteIP))
-  {
-    artSyncCallback = fptr;
-  }
+  static uint8_t* getDmxFrame(void);
+  static uint16_t getOpcode(void);
+  static uint8_t getSequence(void);
+  static uint16_t getUniverse(void);
+  static uint16_t getLength(void);
+  static IPAddress getRemoteIP(void);
+  static void setArtDmxCallback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
+  static void setArtSyncCallback(void (*fptr)(IPAddress remoteIP));
 
 private:
-  uint8_t  node_ip_address[4];
-  uint8_t  id[8];
-  #if defined(ARDUINO_SAMD_ZERO) || defined(ESP8266) || defined(ESP32)
-    WiFiUDP Udp;
-  #else
-    EthernetUDP Udp;
-  #endif
-  struct artnet_reply_s ArtPollReply;
+  static uint8_t  node_ip_address[4];
+  static uint8_t  id[8];
 
+  static AsyncUDP udp; //udp instance
+  static struct artnet_reply_s ArtPollReply;
 
-  uint8_t artnetPacket[MAX_BUFFER_ARTNET];
-  uint16_t packetSize;
-  IPAddress broadcast;
-  uint16_t opcode;
-  uint8_t sequence;
-  uint16_t incomingUniverse;
-  uint16_t dmxDataLength;
-  IPAddress remoteIP;
-  void (*artDmxCallback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
-  void (*artSyncCallback)(IPAddress remoteIP);
+  static artnet_config_s config;
+  static uint8_t artnetPacket[MAX_BUFFER_ARTNET];
+  static uint16_t packetSize;
+  static IPAddress broadcast;
+  static uint16_t opcode;
+  static uint8_t sequence;
+  static uint16_t incomingUniverse;
+  static uint16_t dmxDataLength;
+  static IPAddress remoteIP;
+  static void (*artDmxCallback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+  static void (*artSyncCallback)(IPAddress remoteIP);
 };
 
 #endif
