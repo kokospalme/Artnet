@@ -39,7 +39,12 @@ uint8_t Artnet::sequence;
 uint16_t Artnet::incomingUniverse;
 uint16_t Artnet::dmxDataLength;
 IPAddress Artnet::remoteIP;
+IPAddress Artnet::myIP;
 void (*Artnet::artDmxCallback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+void (*Artnet::universe1Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+void (*Artnet::universe2Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+void (*Artnet::universe3Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+void (*Artnet::universe4Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
 void (*Artnet::artSyncCallback)(IPAddress remoteIP);
 
 /*
@@ -80,7 +85,34 @@ void Artnet::parsePacket(AsyncUDPPacket packet) {
     // Serial.println();
 }
 
-void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){  //!old
+bool Artnet::setConfig(artnet_config_s conf){
+  if(conf.longname.length() > ART_MAX_CHAR_LONG){
+    Serial.println("long name is too long (max 64 character).");
+    return false;
+  }
+  if(conf.shortname.length() > ART_MAX_CHAR_SHORT){
+    Serial.println("short name is too long (max 18 character).");
+    return false;
+  }
+  if(conf.nodereport.length() > ART_MAX_CHAR_LONG){
+    Serial.println("nodereport is too long (max 64 character).");
+    return false;
+  }
+  for(int i = 0; i < 4; i++){
+    if(conf.inputuniverse[i] > ART_MAX_UNIVERSES){
+      Serial.println("invalid universe (0...16)");
+      return false;
+    }
+  }
+  config = conf;
+  return true;
+}
+
+void Artnet::setLocalip(IPAddress ip){
+  myIP = ip;
+}
+
+void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){
   //Cast in uint 32 to use bitwise operation of DWORD
   uint32_t ip32 = ip;
   uint32_t sn32 = sn;
@@ -92,24 +124,23 @@ void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){  //!old
   setBroadcast(IPAddress(bc));
 }
 
-void Artnet::setBroadcast(byte bc[]){//!old
+void Artnet::setBroadcast(byte bc[]){
   //sets the broadcast address
   broadcast = bc;
 }
 
-void Artnet::setBroadcast(IPAddress bc){  //!old
+void Artnet::setBroadcast(IPAddress bc){
   //sets the broadcast address
   broadcast = bc;
 }
 
-uint16_t Artnet::read(AsyncUDPPacket *packet){  //!old
+uint16_t Artnet::read(AsyncUDPPacket *packet){
   packetSize = packet->length();
 
   // remoteIP = udp.remoteIP();
   remoteIP = packet->remoteIP();
   if (packetSize <= MAX_BUFFER_ARTNET && packetSize > 0)
   {
-      // udp.read(artnetPacket, MAX_BUFFER_ARTNET); //!old
       memcpy(artnetPacket, packet->data(), MAX_BUFFER_ARTNET);
       // Check that packetID is "Art-Net" else ignore
       for (byte i = 0 ; i < 8 ; i++)
@@ -127,25 +158,53 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){  //!old
         dmxDataLength = artnetPacket[17] | artnetPacket[16] << 8;
 
         if (artDmxCallback) (*artDmxCallback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
+
+        if(universe1Callback){  //Universe 1
+          for(int i = 0; i < 4; i++){
+            if(incomingUniverse == config.inputuniverse[0])(*universe1Callback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
+          }
+        }
+
+        if(universe2Callback){  // Universe 2
+          for(int i = 0; i < 4; i++){
+            if(incomingUniverse == config.inputuniverse[1])(*universe2Callback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
+          }
+        }
+
+        if(universe3Callback){  // Universe 3
+          for(int i = 0; i < 4; i++){
+            if(incomingUniverse == config.inputuniverse[2])(*universe3Callback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
+          }
+        }
+
+        if(universe4Callback){
+          for(int i = 0; i < 4; i++){
+            if(incomingUniverse == config.inputuniverse[3])(*universe4Callback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
+          }
+        }
+        
         return ART_DMX;
       }
-      if (opcode == ART_POLL)
-      {
+      if (opcode == ART_POLL){
         //fill the reply struct, and then send it to the network's broadcast address
         Serial.print("POLL from ");
         Serial.print(remoteIP);
         Serial.print(" broadcast addr: ");
         Serial.println(broadcast);
 
-        #if !defined(ARDUINO_SAMD_ZERO) && !defined(ESP8266) && !defined(ESP32)
-          IPAddress local_ip = Ethernet.localIP();
-        #else
-          IPAddress local_ip = WiFi.localIP();
-        #endif
-        node_ip_address[0] = local_ip[0];
-      	node_ip_address[1] = local_ip[1];
-      	node_ip_address[2] = local_ip[2];
-      	node_ip_address[3] = local_ip[3];
+        // Aufteilen des Strings an den Punkten und Konvertieren in Zahlen
+        int startIndex = 0;
+        int partIndex = 0;
+        String ipString = myIP.toString();
+        for (int i = 0; i < ipString.length(); i++) {
+          if (ipString.charAt(i) == '.') {
+            node_ip_address[partIndex] = ipString.substring(startIndex, i).toInt();
+            startIndex = i + 1;
+            partIndex++;
+          }
+        }
+        // Letztes Oktett hinzufügen
+        node_ip_address[3] = ipString.substring(startIndex).toInt();
 
         sprintf((char *)id, "Art-Net");
         memcpy(ArtPollReply.id, id, sizeof(ArtPollReply.id));
@@ -160,8 +219,13 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){  //!old
 
         uint8_t shortname [18];
         uint8_t longname [64];
-        sprintf((char *)shortname, "artnet arduino");
-        sprintf((char *)longname, "Art-Net -> Arduino Bridge");
+
+        const char* _shortname = config.shortname.c_str();
+        const char* _longname = config.longname.c_str();
+        
+        sprintf((char *)shortname, _shortname);
+        sprintf((char *)longname, _longname);
+
         memcpy(ArtPollReply.shortname, shortname, sizeof(shortname));
         memcpy(ArtPollReply.longname, longname, sizeof(longname));
 
@@ -197,12 +261,6 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){  //!old
             ArtPollReply.swin[i] = swin[i];
         }
         sprintf((char *)ArtPollReply.nodereport, "%i DMX output universes active.", ArtPollReply.numbports);
-        // udp.beginPacket(broadcast, ART_NET_PORT);//send the packet to the broadcast address  //!old
-        // udp.write((uint8_t *)&ArtPollReply, sizeof(ArtPollReply));
-        // udp.endPacket();
-
-
-        //!new
         AsyncUDPMessage message(sizeof(ArtPollReply));  //new message for the reply
         message.write((uint8_t*)&ArtPollReply, sizeof(ArtPollReply)); //fill the message with data
 
@@ -249,4 +307,28 @@ void Artnet::printPacketContent()
     Serial.print("  ");
   }
   Serial.println('\n');
+}
+
+void Artnet::setArtDmxCallback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
+    artDmxCallback = fptr;
+}
+
+void Artnet::setUniverse1Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
+    universe1Callback = fptr;
+}
+
+void Artnet::setUniverse2Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
+    universe2Callback = fptr;
+}
+
+void Artnet::setUniverse3Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
+    universe3Callback = fptr;
+}
+
+void Artnet::setUniverse4Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
+    universe4Callback = fptr;
+}
+
+void Artnet::setArtSyncCallback(void (*fptr)(IPAddress remoteIP)) {
+    artSyncCallback = fptr;
 }

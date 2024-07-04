@@ -35,16 +35,34 @@ THE SOFTWARE.
 #define ART_POLL_REPLY 0x2100
 #define ART_DMX 0x5000
 #define ART_SYNC 0x5200
+#define ART_MAX_CHAR_LONG 64
+#define ART_MAX_CHAR_SHORT 18
+#define ART_MAX_UNIVERSES 16
 // Buffers
 #define MAX_BUFFER_ARTNET 530
 // Packet
 #define ART_NET_ID "Art-Net\0"
 #define ART_DMX_START 18
 
+#define SHORTNAME_DEFAULT "node1"
+#define LONGNAME_DEFAUT "ArtnetNode1"
+#define NODEREPORT_DEFAULT "tba..."
+#define UNIVERSE1_DEFAULT 1
+#define UNIVERSE2_DEFAULT -1
+#define UNIVERSE3_DEFAULT -1
+#define UNIVERSE4_DEFAULT -1
+#define STATIC_IP_DEFAULT false
+
+enum dmxinput_t { INPUT_ARTNET = 0, INPUT_DMX = 1, INPUT_NOW = 2};
+enum dmxoutput_t { OUTPUT_NONE = -1, OUTPUT_ARTNET = 0, OUTPUT_DMX = 1, OUTPUT_NOW = 2};
 
 struct artnet_config_s {
   uint16_t port = ART_NET_PORT;
-  bool staticIp = false;
+  bool staticIp = STATIC_IP_DEFAULT;  //true if ip should be static
+  String longname = LONGNAME_DEFAUT;  //max 64 character
+  String shortname = SHORTNAME_DEFAULT;  //max. 18 characater
+  String nodereport = NODEREPORT_DEFAULT;
+  int inputuniverse[4] = {UNIVERSE1_DEFAULT, UNIVERSE2_DEFAULT, UNIVERSE3_DEFAULT, UNIVERSE4_DEFAULT};
 };
 
 struct artnet_reply_s {
@@ -61,9 +79,9 @@ struct artnet_reply_s {
   uint8_t  ubea;
   uint8_t  status;
   uint8_t  etsaman[2];
-  uint8_t  shortname[18];
-  uint8_t  longname[64];
-  uint8_t  nodereport[64];
+  uint8_t  shortname[ART_MAX_CHAR_SHORT];
+  uint8_t  longname[ART_MAX_CHAR_LONG];
+  uint8_t  nodereport[ART_MAX_CHAR_LONG];
   uint8_t  numbportsH;
   uint8_t  numbports;
   uint8_t  porttypes[4];//max of 4 ports per node
@@ -90,6 +108,8 @@ class Artnet
 public:
   static void begin(byte mac[], byte ip[]);
   static void parsePacket(AsyncUDPPacket packet);
+  static bool setConfig(artnet_config_s conf);
+  static void setLocalip(IPAddress ip);
 
   static void setBroadcastAuto(IPAddress ip, IPAddress sn);
   static void setBroadcast(byte bc[]);
@@ -106,6 +126,10 @@ public:
   static uint16_t getLength(void);
   static IPAddress getRemoteIP(void);
   static void setArtDmxCallback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
+  static void setUniverse1Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
+  static void setUniverse2Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
+  static void setUniverse3Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
+  static void setUniverse4Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP));
   static void setArtSyncCallback(void (*fptr)(IPAddress remoteIP));
 
 private:
@@ -124,7 +148,12 @@ private:
   static uint16_t incomingUniverse;
   static uint16_t dmxDataLength;
   static IPAddress remoteIP;
+  static IPAddress myIP;
   static void (*artDmxCallback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+  static void (*universe1Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+  static void (*universe2Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+  static void (*universe3Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
+  static void (*universe4Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
   static void (*artSyncCallback)(IPAddress remoteIP);
 };
 
