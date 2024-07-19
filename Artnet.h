@@ -117,6 +117,7 @@ public:
   static uint16_t read(AsyncUDPPacket *packet);
   static void printPacketHeader();
   static void printPacketContent();
+  static void readUniverse(uint8_t universe, uint8_t* data);
 
   // Return a pointer to the start of the DMX data
   static uint8_t* getDmxFrame(void);
@@ -155,6 +156,7 @@ private:
   static void (*universe3Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
   static void (*universe4Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
   static void (*artSyncCallback)(IPAddress remoteIP);
+  // static SemaphoreHandle_t& mutex;
 };
 
 #endif

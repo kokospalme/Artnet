@@ -29,6 +29,7 @@ uint8_t Artnet::id[8];
 
 AsyncUDP Artnet::udp;
 struct artnet_reply_s Artnet::ArtPollReply;
+// SemaphoreHandle_t* Artnet::mutex;
 
 artnet_config_s Artnet::config;
 uint8_t Artnet::artnetPacket[MAX_BUFFER_ARTNET];
@@ -66,6 +67,7 @@ void Artnet::begin(byte mac[], byte ip[]){
 
   // udp.begin(ART_NET_PORT);//!old
 }
+
 
 /*
 Funktion zum Pakete empfangen
@@ -156,7 +158,7 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){
         sequence = artnetPacket[12];
         incomingUniverse = artnetPacket[14] | artnetPacket[15] << 8;
         dmxDataLength = artnetPacket[17] | artnetPacket[16] << 8;
-
+    
         if (artDmxCallback) (*artDmxCallback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
 
         if(universe1Callback){  //Universe 1
@@ -182,7 +184,7 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){
             if(incomingUniverse == config.inputuniverse[3])(*universe4Callback)(incomingUniverse, dmxDataLength, sequence, artnetPacket + ART_DMX_START, remoteIP);
           }
         }
-        
+        delay(5);
         return ART_DMX;
       }
       if (opcode == ART_POLL){
@@ -331,4 +333,9 @@ void Artnet::setUniverse4Callback(void (*fptr)(uint16_t universe, uint16_t lengt
 
 void Artnet::setArtSyncCallback(void (*fptr)(IPAddress remoteIP)) {
     artSyncCallback = fptr;
+}
+
+
+void Artnet::readUniverse(uint8_t universe, uint8_t* data){
+  memcpy(data, artnetPacket + ART_DMX_START, sizeof(data));
 }
