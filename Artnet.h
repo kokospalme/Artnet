@@ -1,7 +1,9 @@
 /*The MIT License (MIT)
 
+Copyright (c) 2024 Christopher Wüpping
 Copyright (c) 2014 Nathanaël Lécaudé
-https://github.com/natcl/Artnet, http://forum.pjrc.com/threads/24688-Artnet-to-OctoWS2811
+https://github.com/natcl/Artnet, http://forum.pjrc.com/threads/24688-Artnet-to-OctoWS2811,
+https://github.com/kokospalme/Artnet
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
