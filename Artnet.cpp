@@ -71,7 +71,7 @@ void Artnet::begin(byte mac[], byte ip[]){
 Funktion zum Pakete empfangen
 */
 void Artnet::parsePacket(AsyncUDPPacket packet) {
-    // Serial.println("Art-Net Packet Received:");
+    // Serial.println("Art-Net Packet Received:");unter welch
     // Serial.print("From: ");
     // Serial.print(packet.remoteIP());
     // Serial.print(":");
@@ -79,7 +79,6 @@ void Artnet::parsePacket(AsyncUDPPacket packet) {
     // Serial.print("Length: ");
     // Serial.println(packet.length());
 
-    // Hier können spezifische Art-Net-Daten verarbeitet werden
   read(&packet);
 
     // Serial.println();

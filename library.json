@@ -1,23 +1,23 @@
 {
-  "name": "Art-Net",
+  "name": "Artnet",
   "keywords": "artnet, art-net, Ethernet, DMX",
-  "description": "An Art-Net library for Teensy and Arduino",
+  "description": "An Art-Net library for ESP32-C3",
   "repository":
   {
     "type": "git",
-    "url": "https://github.com/natcl/Artnet.git"
+    "url": "https://github.com/kokospalme/Artnet.git"
   },
   "authors":
   [
     {
-      "name": "Nathanaël Lécaudé",
+      "name": "Christopher Wüpping",
       "maintainer": true
     }
   ],
   "dependencies":
   {
-    "name": "Ethernet",
-    "authors": "Paul Stoffregen",
+    "name": "AsyncUDP_ESP32_SC_Ethernet",
+    "url": "https://github.com/khoih-prog/AsyncUDP_ESP32_SC_Ethernet",
     "frameworks": "arduino"
   },
   "version": "1.0.0",
