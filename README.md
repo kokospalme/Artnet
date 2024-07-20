@@ -9,7 +9,7 @@ Note: this library assumes you are using [this library](https://github.com/khoih
 * more callback-functions are implemented (see ```Artnet.h```)
 * NOTE: To get it work on ESP32-C3 you have to edit the SPI_HOST variable in khoih's library manually:
     * ```WebServer_ESP32_SC_W5500/src/w5500/esp32_sc_w5500.h:68:100```: change ```SPI3_HOST```to ```SPI2_HOST```
-    * ```WebServer_ESP32_SC_W6100/src/w6100/esp32_sc_w6100.h:68:100:``: change ```SPI3_HOST```to ```SPI2_HOST```
+    * ```WebServer_ESP32_SC_W6100/src/w6100/esp32_sc_w6100.h:68:100:```: change ```SPI3_HOST```to ```SPI2_HOST```
 
 ## Acknowledgements
 
