@@ -1,6 +1,6 @@
 # Artnet
 
-An Art-Net library for ESP32-C3 (ESP32 and W6100 muntested)
+An Art-Net library for ESP32-C3 (ESP32 and W6100 are untested yet)
 
 Note: this library assumes you are using [this library](https://github.com/khoih-prog/AsyncUDP_ESP32_SC_Ethernet) for Ethernet
 
