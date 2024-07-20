@@ -64,8 +64,6 @@ void Artnet::begin(byte mac[], byte ip[]){
   } else {
       Serial.println("Failed to start UDP server");
   }
-
-  // udp.begin(ART_NET_PORT);//!old
 }
 
 
@@ -135,6 +133,7 @@ void Artnet::setBroadcast(IPAddress bc){
   //sets the broadcast address
   broadcast = bc;
 }
+
 
 uint16_t Artnet::read(AsyncUDPPacket *packet){
   packetSize = packet->length();
@@ -266,7 +265,7 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){
         AsyncUDPMessage message(sizeof(ArtPollReply));  //new message for the reply
         message.write((uint8_t*)&ArtPollReply, sizeof(ArtPollReply)); //fill the message with data
 
-        if (udp.broadcastTo(message, ART_NET_PORT, TCPIP_ADAPTER_IF_STA)) { //send reply
+        if (udp.broadcastTo(message, ART_NET_PORT, TCPIP_ADAPTER_IF_ETH)) { //send reply
           Serial.println("Packet sent successfully.");
         } else {
           Serial.println("Failed to send packet.");
