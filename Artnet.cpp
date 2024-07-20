@@ -48,9 +48,21 @@ void (*Artnet::universe3Callback)(uint16_t universe, uint16_t length, uint8_t se
 void (*Artnet::universe4Callback)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP);
 void (*Artnet::artSyncCallback)(IPAddress remoteIP);
 
-/*
-begin Artnet with SPI
-*/
+
+/**
+ * @brief Initializes the Artnet library with the specified MAC and IP addresses.
+ *
+ * This function sets up the necessary configurations and prepares the Artnet
+ * library for use. It initializes network settings with the provided MAC and IP
+ * addresses, configures UDP communication, and registers a callback function for
+ * handling incoming Art-Net data packets.
+ *
+ * The function must be called before any other Artnet operations are performed.
+ *
+ * @param mac A byte array containing the MAC address for the network interface.
+ * @param ip A byte array containing the IP address for the device.
+ * @return void
+ * */
 void Artnet::begin(byte mac[], byte ip[]){
 
   if (udp.listen(config.port)) {
@@ -67,9 +79,18 @@ void Artnet::begin(byte mac[], byte ip[]){
 }
 
 
-/*
-Funktion zum Pakete empfangen
-*/
+/**
+ * @brief Parses an incoming Art-Net packet.
+ *
+ * This function is called when an Art-Net packet is received. It handles the
+ * parsing of the packet by delegating the actual reading of the packet data
+ * to the `read` function. This function provides optional debug output to the
+ * Serial console, including the remote IP address, remote port, and the packet
+ * length.
+ *
+ * @param packet The incoming Art-Net packet to be parsed. *
+ * @return void
+ */
 void Artnet::parsePacket(AsyncUDPPacket packet) {
     // Serial.println("Art-Net Packet Received:");unter welch
     // Serial.print("From: ");
@@ -84,6 +105,19 @@ void Artnet::parsePacket(AsyncUDPPacket packet) {
     // Serial.println();
 }
 
+/**
+ * @brief Sets the Art-Net configuration for the node.
+ *
+ * This function configures the Art-Net node with the specified settings. It validates
+ * the provided configuration parameters, such as the long name, short name, node report,
+ * and input universes, ensuring they do not exceed the maximum allowed lengths and values.
+ * If any parameter is invalid, the function prints an error message to the Serial console
+ * and returns false. If all parameters are valid, the configuration is applied, and the
+ * function returns true.
+ *
+ * @param conf The Art-Net configuration settings to be applied.
+ * @return true if the configuration is valid and has been set successfully, false otherwise.
+ */
 bool Artnet::setConfig(artnet_config_s conf){
   if(conf.longname.length() > ART_MAX_CHAR_LONG){
     Serial.println("long name is too long (max 64 character).");
@@ -107,10 +141,30 @@ bool Artnet::setConfig(artnet_config_s conf){
   return true;
 }
 
+/**
+ * @brief Sets the local IP address of the Art-Net node.
+ *
+ * This function sets the IP address of the Art-Net node to the specified IP address.
+ * This IP address is used by the node for network communication.
+ *
+ * @param ip The IP address to be set as the local IP address of the node.
+ * @return void
+ */
 void Artnet::setLocalip(IPAddress ip){
   myIP = ip;
 }
 
+/**
+ * @brief Automatically sets the broadcast address based on the given IP address and subnet mask.
+ *
+ * This function calculates the broadcast address by performing a bitwise operation
+ * on the provided IP address and subnet mask. The calculated broadcast address is
+ * then set for the Art-Net node.
+ *
+ * @param ip The IP address of the node.
+ * @param sn The subnet mask to be used for calculating the broadcast address.
+ * @return void
+ */
 void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){
   //Cast in uint 32 to use bitwise operation of DWORD
   uint32_t ip32 = ip;
@@ -123,17 +177,44 @@ void Artnet::setBroadcastAuto(IPAddress ip, IPAddress sn){
   setBroadcast(IPAddress(bc));
 }
 
+/**
+ * @brief Sets the broadcast address of the Art-Net node.
+ *
+ * This function sets the broadcast address of the Art-Net node to the specified
+ * address provided as a byte array.
+ *
+ * @param bc The broadcast address to be set, given as a byte array.
+ * @return void
+ */
 void Artnet::setBroadcast(byte bc[]){
   //sets the broadcast address
   broadcast = bc;
 }
 
+/**
+ * @brief Sets the broadcast address of the Art-Net node.
+ *
+ * This function sets the broadcast address of the Art-Net node to the specified
+ * address provided as an IPAddress object.
+ *
+ * @param bc The broadcast address to be set, given as an IPAddress object.
+ * @return void
+ */
 void Artnet::setBroadcast(IPAddress bc){
   //sets the broadcast address
   broadcast = bc;
 }
 
-
+/**
+ * @brief Reads and processes an incoming Art-Net packet.
+ *
+ * This function reads an incoming Art-Net packet, verifies its integrity, and
+ * processes it based on its opcode. It supports handling DMX, Poll, and Sync
+ * packets, invoking appropriate callbacks for each type.
+ *
+ * @param packet The incoming Art-Net packet to be read and processed.
+ * @return The opcode of the processed packet, or 0 if the packet is invalid.
+ */
 uint16_t Artnet::read(AsyncUDPPacket *packet){
   packetSize = packet->length();
 
@@ -286,6 +367,15 @@ uint16_t Artnet::read(AsyncUDPPacket *packet){
   return 0;
 }
 
+/**
+ * @brief Prints the header information of the last received Art-Net packet.
+ *
+ * This function outputs the header details of the most recently received Art-Net packet
+ * to the Serial console. The information includes packet size, opcode, universe number,
+ * data length, and sequence number.
+ *
+ * @return void
+ */
 void Artnet::printPacketHeader()
 {
   Serial.print("packet size = ");
@@ -300,6 +390,14 @@ void Artnet::printPacketHeader()
   Serial.println(sequence);
 }
 
+/**
+ * @brief Prints the content of the DMX data in the last received Art-Net packet.
+ *
+ * This function outputs the DMX data content of the most recently received Art-Net packet
+ * to the Serial console. Each data byte is printed in decimal format.
+ *
+ * @return void
+ */
 void Artnet::printPacketContent()
 {
   for (uint16_t i = ART_DMX_START ; i < dmxDataLength ; i++){
@@ -309,31 +407,99 @@ void Artnet::printPacketContent()
   Serial.println('\n');
 }
 
+/**
+ * @brief Sets the callback function for handling Art-Net DMX packets.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net DMX packet is received. The callback function receives the universe,
+ * data length, sequence number, DMX data, and the remote IP address as parameters.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setArtDmxCallback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
     artDmxCallback = fptr;
 }
 
+/**
+ * @brief Sets the callback function for handling Art-Net packets for Universe 1.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net packet for Universe 1 is received. The callback function receives the
+ * universe, data length, sequence number, DMX data, and the remote IP address as parameters.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setUniverse1Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
     universe1Callback = fptr;
 }
 
+/**
+ * @brief Sets the callback function for handling Art-Net packets for Universe 2.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net packet for Universe 2 is received. The callback function receives the
+ * universe, data length, sequence number, DMX data, and the remote IP address as parameters.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setUniverse2Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
     universe2Callback = fptr;
 }
 
+/**
+ * @brief Sets the callback function for handling Art-Net packets for Universe 3.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net packet for Universe 3 is received. The callback function receives the
+ * universe, data length, sequence number, DMX data, and the remote IP address as parameters.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setUniverse3Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
     universe3Callback = fptr;
 }
-
+/**
+ * @brief Sets the callback function for handling Art-Net packets for Universe 4.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net packet for Universe 4 is received. The callback function receives the
+ * universe, data length, sequence number, DMX data, and the remote IP address as parameters.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setUniverse4Callback(void (*fptr)(uint16_t universe, uint16_t length, uint8_t sequence, uint8_t* data, IPAddress remoteIP)) {
     universe4Callback = fptr;
 }
 
+/**
+ * @brief Sets the callback function for handling Art-Net Sync packets.
+ *
+ * This function registers a callback function that will be invoked whenever an
+ * Art-Net Sync packet is received. The callback function receives the remote IP
+ * address as a parameter.
+ *
+ * @param fptr A pointer to the callback function to be set.
+ * @return void
+ */
 void Artnet::setArtSyncCallback(void (*fptr)(IPAddress remoteIP)) {
     artSyncCallback = fptr;
 }
 
-
+/**
+ * @brief Reads DMX data for a specific universe from the last received Art-Net packet.
+ *
+ * This function copies the DMX data for a specified universe from the most recently
+ * received Art-Net packet into the provided data buffer.
+ *
+ * @param universe The universe number to read the DMX data from.
+ * @param data A pointer to the buffer where the DMX data will be copied.
+ * @return void
+ */
 void Artnet::readUniverse(uint8_t universe, uint8_t* data){
   memcpy(data, artnetPacket + ART_DMX_START, sizeof(data));
 }
